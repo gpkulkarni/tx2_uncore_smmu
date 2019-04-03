@@ -1,5 +1,10 @@
-VERSION=
+
+ifdef VERSION
+obj-m +=  tx2_uncore_smmu-${VERSION}.o
+else
 obj-m +=  tx2_uncore_smmu.o
+endif
+
 DIR=$(PWD)
 
 all:

@@ -71,6 +71,8 @@
 #define SMMU_BASE(node, smmu)	\
 	(SMMU_BASE_ADDR + (node * 0x40000000) + (smmu * 0x20000))
 
+static void (*perf_event_update_userpage_local)(struct perf_event *event);
+
 static const unsigned long smmu_event_hw_offset[] = {
 	SMMU_PERF_NUM_CYCLES,
 	SMMU_PERF_ARID_CONT_CACHE_HIT,
@@ -342,7 +344,7 @@ static bool tx2_uncore_validate_event_group(struct perf_event *event)
 	if (!tx2_uncore_validate_event(event->pmu, leader, &counters))
 		return false;
 
-	for_each_sibling_event(sibling, leader) {
+	list_for_each_entry(sibling, &leader->sibling_list, group_entry) {
 		if (!tx2_uncore_validate_event(event->pmu, sibling, &counters))
 			return false;
 	}
@@ -411,7 +413,7 @@ static void tx2_uncore_event_start(struct perf_event *event, int flags)
 	reg_writel(0xfffffc07, hwc->config_base);
 	local64_set(&event->hw.prev_count, 0ULL);
 
-	perf_event_update_userpage(event);
+	perf_event_update_userpage_local(event);
 
 	/* Start timer for first event */
 	if (bitmap_weight(tx2_pmu->active_counters,
@@ -479,7 +481,7 @@ static void tx2_uncore_event_del(struct perf_event *event, int flags)
 	/* clear the assigned counter */
 	free_counter(tx2_pmu, GET_COUNTERID(event));
 
-	perf_event_update_userpage(event);
+	perf_event_update_userpage_local(event);
 	tx2_pmu->events[hwc->idx] = NULL;
 	hwc->idx = -1;
 }
@@ -609,6 +611,15 @@ static int tx2_uncore_pmu_add(int node, int smmu)
 static int __init smmu_perf_init(void)
 {
 	int node, smmu;
+	unsigned long addr;
+
+	addr = kallsyms_lookup_name("perf_event_update_userpage");
+
+	if (!addr) {
+		pr_err("Unable to find Symbol(%lx)\n", addr);
+		return -1;
+	}
+	perf_event_update_userpage_local = (void *)addr;
 
 	for_each_online_node(node) {
 		for (smmu = 0; smmu < 3; smmu++)
