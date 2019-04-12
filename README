@@ -14,6 +14,14 @@ Module load/remove.
 
 To list events => perf list | grep smmu
 
+smmu 0 to 2 are part of SOCKET 0.
+smmu 3 to 5 are part of SOCKET 1.
+
+Use sysfs to know which smmu device is connected to your pci device.
+
+example :
+ls /sys/bus/platform/devices/arm-smmu-v3.0.auto/iommu/smmu3.0x0000000402300000/devices/
+
 NOTE:
 tx2_uncore_smmu.c is a copy of upstream version.
 tx2_uncore_smmu-v1.c is a copy of tx2_uncore_smmu.c with changes to port for
