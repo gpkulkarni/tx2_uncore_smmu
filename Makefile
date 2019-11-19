@@ -1,4 +1,5 @@
 
+VERSION=
 obj-m +=  tx2_uncore_smmu.o
 
 DIR=$(PWD)
